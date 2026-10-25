@@ -4,11 +4,13 @@ import type { WeightUnit } from '../config.js';
 import { addDays, isValidDate, lastDays, type LocalNow } from '../dates.js';
 import { foodInput, readingInput, weightInput } from '../entries.js';
 import type { Store } from '../store.js';
+import { safePath } from './auth.js';
 import { DayPage, HistoryPage } from './pages.js';
 
 export type WebDeps = {
     store: Store;
     weightUnit: WeightUnit;
+    signOut: boolean;
     now(): LocalNow;
 };
 
@@ -40,6 +42,7 @@ export function webRoutes(deps: WebDeps) {
                 isToday={date === now.date}
                 defaultTime={date === now.date ? now.time : '08:00'}
                 weightUnit={deps.weightUnit}
+                signOut={deps.signOut}
                 weight={store.weights({ from: date, to: date })[0]}
                 previousWeight={store.latestWeightBefore(date)}
                 readings={store.readings({ from: date, to: date })}
@@ -63,6 +66,7 @@ export function webRoutes(deps: WebDeps) {
             <HistoryPage
                 days={days}
                 weightUnit={deps.weightUnit}
+                signOut={deps.signOut}
                 dates={dates}
                 weights={store.weights(range)}
                 readings={store.readings(range)}
@@ -104,11 +108,8 @@ export function webRoutes(deps: WebDeps) {
     const remove = (path: string, del: (key: string) => void) =>
         app.post(path, async c => {
             del(c.req.param('key') ?? '');
-            const back = String((await c.req.parseBody()).back ?? '/');
-            return c.redirect(
-                back.startsWith('/') && !back.startsWith('//') ? back : '/',
-                303
-            );
+            const back = (await c.req.parseBody()).back;
+            return c.redirect(safePath(String(back)), 303);
         });
 
     remove('/weights/:key/delete', date => store.deleteWeight(date));

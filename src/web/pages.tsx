@@ -15,6 +15,7 @@ export type DayPageProps = {
     isToday: boolean;
     defaultTime: string;
     weightUnit: WeightUnit;
+    signOut: boolean;
     weight: Weight | undefined;
     previousWeight: Weight | undefined;
     readings: Reading[];
@@ -32,7 +33,7 @@ export function DayPage(p: DayPageProps) {
     const back = `/?date=${p.date}`;
 
     return (
-        <Layout title={`Health · ${p.date}`} nav="today">
+        <Layout title={`Health · ${p.date}`} nav="today" signOut={p.signOut}>
             {p.error && <div class="error">{p.error}</div>}
             <section class="daynav">
                 <a href={`/?date=${addDays(p.date, -1)}`}>← Prev</a>
@@ -268,6 +269,7 @@ export function DayPage(p: DayPageProps) {
 export type HistoryPageProps = {
     days: number;
     weightUnit: WeightUnit;
+    signOut: boolean;
     dates: string[];
     weights: Weight[];
     readings: Reading[];
@@ -284,7 +286,7 @@ export function HistoryPage(p: HistoryPageProps) {
     const last = p.weights.at(-1);
 
     return (
-        <Layout title="Health · History" nav="history">
+        <Layout title="Health · History" nav="history" signOut={p.signOut}>
             <section>
                 <div class="daynav">
                     <h2>Last {p.days} days</h2>

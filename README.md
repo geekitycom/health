@@ -20,7 +20,7 @@ Open http://localhost:3000. The data lives in one SQLite file (`data/health.db` 
 | `DATABASE_PATH` | `data/health.db` | SQLite file. The Docker image uses `/data/health.db`.                  |
 | `TIME_ZONE`     | system zone      | IANA zone that decides what "today" is, for example `America/Chicago`. |
 | `WEIGHT_UNIT`   | `lb`             | `lb` or `kg`. Weights are stored as entered.                           |
-| `APP_PASSWORD`  | unset (open)     | Protects the web UI with HTTP Basic auth. Any username works.          |
+| `APP_PASSWORD`  | unset (open)     | Protects the web UI with a sign-in form and a 90-day session cookie.   |
 | `MCP_TOKEN`     | unset (open)     | Bearer token required on `/mcp`.                                       |
 
 Set both `APP_PASSWORD` and `MCP_TOKEN` on any server reachable from the internet.

@@ -1,3 +1,4 @@
+import { raw } from 'hono/html';
 import type { Child } from 'hono/jsx';
 
 const STYLE = `
@@ -55,42 +56,61 @@ svg.spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-
 
 export function Layout(props: {
     title: string;
-    nav: 'today' | 'history';
+    nav?: 'today' | 'history';
+    signOut?: boolean;
     children: Child;
 }) {
     return (
-        <html lang="en">
-            <head>
-                <meta charset="utf-8" />
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1"
-                />
-                <title>{props.title}</title>
-                <style dangerouslySetInnerHTML={{ __html: STYLE }} />
-            </head>
-            <body>
-                <header>
-                    <strong>Health</strong>
-                    <a
-                        href="/"
-                        aria-current={
-                            props.nav === 'today' ? 'page' : undefined
-                        }
-                    >
-                        Day
-                    </a>
-                    <a
-                        href="/history"
-                        aria-current={
-                            props.nav === 'history' ? 'page' : undefined
-                        }
-                    >
-                        History
-                    </a>
-                </header>
-                <main>{props.children}</main>
-            </body>
-        </html>
+        <>
+            {raw('<!doctype html>')}
+            <html lang="en">
+                <head>
+                    <meta charset="utf-8" />
+                    <meta
+                        name="viewport"
+                        content="width=device-width, initial-scale=1"
+                    />
+                    <title>{props.title}</title>
+                    <style dangerouslySetInnerHTML={{ __html: STYLE }} />
+                </head>
+                <body>
+                    <header>
+                        <strong>Health</strong>
+                        {props.nav && (
+                            <>
+                                <a
+                                    href="/"
+                                    aria-current={
+                                        props.nav === 'today'
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                >
+                                    Day
+                                </a>
+                                <a
+                                    href="/history"
+                                    aria-current={
+                                        props.nav === 'history'
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                >
+                                    History
+                                </a>
+                            </>
+                        )}
+                        {props.signOut && (
+                            <form method="post" action="/logout">
+                                <button type="submit" class="link">
+                                    Sign out
+                                </button>
+                            </form>
+                        )}
+                    </header>
+                    <main>{props.children}</main>
+                </body>
+            </html>
+        </>
     );
 }

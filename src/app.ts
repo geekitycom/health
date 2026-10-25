@@ -1,12 +1,11 @@
-import { timingSafeEqual } from 'node:crypto';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { Hono } from 'hono';
-import { basicAuth } from 'hono/basic-auth';
 import { bearerAuth } from 'hono/bearer-auth';
 import type { Config } from './config.js';
 import { localNow } from './dates.js';
 import { createMcpServer } from './mcp.js';
 import type { Store } from './store.js';
+import { passwordAuth, safeEqual } from './web/auth.js';
 import { webRoutes } from './web/routes.js';
 
 export type AppDeps = {
@@ -44,22 +43,22 @@ export function createApp(deps: AppDeps) {
     });
 
     if (config.appPassword) {
-        const password = config.appPassword;
-        app.use(
-            '*',
-            basicAuth({
-                verifyUser: (_user, pass) => safeEqual(pass, password),
-                realm: 'health'
-            })
-        );
+        const auth = passwordAuth({
+            password: config.appPassword,
+            now: deps.now
+        });
+        app.route('/', auth.routes);
+        app.use('*', auth.requireSession);
     }
-    app.route('/', webRoutes({ store, weightUnit: config.weightUnit, now }));
+    app.route(
+        '/',
+        webRoutes({
+            store,
+            weightUnit: config.weightUnit,
+            signOut: Boolean(config.appPassword),
+            now
+        })
+    );
 
     return app;
-}
-
-function safeEqual(a: string, b: string): boolean {
-    const left = Buffer.from(a);
-    const right = Buffer.from(b);
-    return left.length === right.length && timingSafeEqual(left, right);
 }

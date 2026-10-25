@@ -79,14 +79,85 @@ describe('web UI', () => {
         await post(`/foods/${first?.id}/delete`, { back: '/?date=2026-10-25' });
         expect(store.foods(day).map(f => f.description)).toEqual(['Salad']);
     });
+});
 
-    it('requires the password when APP_PASSWORD is set', async () => {
+describe('sign in', () => {
+    async function signIn(
+        post: ReturnType<typeof harness>['post'],
+        password: string
+    ) {
+        return post('/login', { password, next: '/history?days=7' });
+    }
+
+    it('redirects to the login form with the page to return to', async () => {
         const { app } = harness({ APP_PASSWORD: 'secret' });
-        expect((await app.request('/')).status).toBe(401);
-        const ok = await app.request('/', {
-            headers: { authorization: `Basic ${btoa('me:secret')}` }
-        });
-        expect(ok.status).toBe(200);
+        const res = await app.request('/history?days=7');
+        expect(res.status).toBe(303);
+        expect(res.headers.get('location')).toBe(
+            '/login?next=%2Fhistory%3Fdays%3D7'
+        );
+        const form = await (await app.request('/login')).text();
+        expect(form).toContain('autocomplete="current-password"');
         expect((await app.request('/health')).status).toBe(200);
+    });
+
+    it('rejects a wrong password', async () => {
+        const { post } = harness({ APP_PASSWORD: 'secret' });
+        const res = await signIn(post, 'nope');
+        expect(res.status).toBe(401);
+        expect(res.headers.get('set-cookie')).toBeNull();
+        expect(await res.text()).toContain('Wrong password.');
+    });
+
+    it('keeps a session cookie after signing in', async () => {
+        const { app, post } = harness({ APP_PASSWORD: 'secret' });
+        const res = await signIn(post, 'secret');
+        expect(res.status).toBe(303);
+        expect(res.headers.get('location')).toBe('/history?days=7');
+        const cookie = res.headers.get('set-cookie') ?? '';
+        expect(cookie).toContain('HttpOnly');
+        const session = cookie.split(';')[0] ?? '';
+
+        const page = await app.request('/', { headers: { cookie: session } });
+        expect(page.status).toBe(200);
+        expect(await page.text()).toContain('Sign out');
+
+        const forged = session.replace(/=\d+/, '=99999999999999');
+        const rejected = await app.request('/', {
+            headers: { cookie: forged }
+        });
+        expect(rejected.status).toBe(303);
+    });
+
+    it('clears the session on sign out', async () => {
+        const { post } = harness({ APP_PASSWORD: 'secret' });
+        const res = await post('/logout', {});
+        expect(res.headers.get('location')).toBe('/login');
+        expect(res.headers.get('set-cookie')).toContain('Max-Age=0');
+    });
+
+    it('blocks writes without a session', async () => {
+        const { post, store } = harness({ APP_PASSWORD: 'secret' });
+        const res = await post('/weights', {
+            date: '2026-10-25',
+            weight: '200'
+        });
+        expect(res.headers.get('location')).toBe('/login?next=%2F');
+        expect(store.weights({ from: '2026-10-25', to: '2026-10-25' })).toEqual(
+            []
+        );
+    });
+
+    it('marks the cookie Secure behind an https proxy', async () => {
+        const { app } = harness({ APP_PASSWORD: 'secret' });
+        const res = await app.request('/login', {
+            method: 'POST',
+            body: new URLSearchParams({ password: 'secret' }),
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                'x-forwarded-proto': 'https'
+            }
+        });
+        expect(res.headers.get('set-cookie')).toContain('Secure');
     });
 });
