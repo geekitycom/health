@@ -2,13 +2,22 @@ import type { WeightUnit } from '../config.js';
 import { addDays } from '../dates.js';
 import {
     MEALS,
+    READING_KINDS,
     type Food,
     type Meal,
     type Reading,
+    type ReadingKind,
     type Weight
 } from '../entries.js';
-import { dailyTotals, gki, netCarbs, type DayTotals } from '../summary.js';
+import {
+    dailyTotals,
+    gkiByKetoneId,
+    netCarbs,
+    type DayTotals
+} from '../summary.js';
 import { Layout } from './layout.js';
+
+const READING_KIND_LIST = Object.keys(READING_KINDS) as ReadingKind[];
 
 export type DayPageProps = {
     date: string;
@@ -31,6 +40,7 @@ export function DayPage(p: DayPageProps) {
             ? p.weight.weight - p.previousWeight.weight
             : undefined;
     const back = `/?date=${p.date}`;
+    const gki = gkiByKetoneId(p.readings);
 
     return (
         <Layout title={`Health · ${p.date}`} nav="today" signOut={p.signOut}>
@@ -90,7 +100,11 @@ export function DayPage(p: DayPageProps) {
 
             <section>
                 <h2>Readings</h2>
-                <form class="entry" method="post" action="/readings">
+                <form
+                    class="entry reading-form"
+                    method="post"
+                    action="/readings"
+                >
                     <input type="hidden" name="date" value={p.date} />
                     <label>
                         Time
@@ -101,19 +115,47 @@ export function DayPage(p: DayPageProps) {
                             required
                         />
                     </label>
-                    <NumberField
-                        name="glucose"
-                        label="Glucose (mg/dL)"
-                        step="1"
-                    />
-                    <NumberField
-                        name="ketones"
-                        label="Ketones (mmol/L)"
-                        step="0.1"
-                    />
-                    <NumberField name="systolic" label="Systolic" step="1" />
-                    <NumberField name="diastolic" label="Diastolic" step="1" />
-                    <NumberField name="pulse" label="Pulse" step="1" />
+                    <label>
+                        Type
+                        <select name="kind">
+                            {READING_KIND_LIST.map(kind => (
+                                <option value={kind}>
+                                    {READING_KINDS[kind].label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label class="single">
+                        <span>
+                            Value{' '}
+                            {READING_KIND_LIST.map(kind => (
+                                <span data-kind={kind}>
+                                    ({READING_KINDS[kind].unit})
+                                </span>
+                            ))}
+                        </span>
+                        <input
+                            name="value"
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            inputmode="decimal"
+                        />
+                    </label>
+                    <span class="bp">
+                        <NumberField
+                            name="systolic"
+                            label="Systolic"
+                            step="1"
+                        />
+                    </span>
+                    <span class="bp">
+                        <NumberField
+                            name="diastolic"
+                            label="Diastolic"
+                            step="1"
+                        />
+                    </span>
                     <label class="wide">
                         Note
                         <input name="note" />
@@ -126,11 +168,8 @@ export function DayPage(p: DayPageProps) {
                             <thead>
                                 <tr>
                                     <th>Time</th>
-                                    <th class="num">Glucose</th>
-                                    <th class="num">Ketones</th>
+                                    <th>Reading</th>
                                     <th class="num">GKI</th>
-                                    <th class="num">BP</th>
-                                    <th class="num">Pulse</th>
                                     <th>Note</th>
                                     <th />
                                 </tr>
@@ -139,15 +178,10 @@ export function DayPage(p: DayPageProps) {
                                 {p.readings.map(r => (
                                     <tr>
                                         <td>{r.time}</td>
-                                        <td class="num">{r.glucose ?? ''}</td>
-                                        <td class="num">{r.ketones ?? ''}</td>
-                                        <td class="num">{gki(r) ?? ''}</td>
+                                        <td>{formatReading(r)}</td>
                                         <td class="num">
-                                            {r.systolic !== null
-                                                ? `${r.systolic}/${r.diastolic}`
-                                                : ''}
+                                            {gki.get(r.id) ?? ''}
                                         </td>
-                                        <td class="num">{r.pulse ?? ''}</td>
                                         <td>{r.note ?? ''}</td>
                                         <td>
                                             <DeleteButton
@@ -282,6 +316,7 @@ export function HistoryPage(p: HistoryPageProps) {
         dailyTotals(p.foods).map(t => [t.date, t])
     );
     const readingsByDate = Map.groupBy(p.readings, r => r.date);
+    const gki = gkiByKetoneId(p.readings);
     const first = p.weights[0];
     const last = p.weights.at(-1);
 
@@ -344,7 +379,10 @@ export function HistoryPage(p: HistoryPageProps) {
                                     </td>
                                     <td>
                                         {(readingsByDate.get(date) ?? [])
-                                            .map(describeReading)
+                                            .map(r => {
+                                                const g = gki.get(r.id);
+                                                return `${r.time} ${formatReading(r)}${g === undefined ? '' : ` (GKI ${g})`}`;
+                                            })
                                             .join('; ')}
                                     </td>
                                     <td class="num">{t?.calories ?? ''}</td>
@@ -411,15 +449,11 @@ function Sparkline(props: { weights: Weight[] }) {
     );
 }
 
-function describeReading(r: Reading): string {
-    const parts = [
-        r.glucose !== null && `G ${r.glucose}`,
-        r.ketones !== null && `K ${r.ketones}`,
-        gki(r) !== null && `GKI ${gki(r)}`,
-        r.systolic !== null && `BP ${r.systolic}/${r.diastolic}`,
-        r.pulse !== null && `HR ${r.pulse}`
-    ].filter(Boolean);
-    return `${r.time} ${parts.join(' ')}`;
+function formatReading(r: Reading): string {
+    const { label, unit } = READING_KINDS[r.kind];
+    const value =
+        r.kind === 'blood_pressure' ? `${r.systolic}/${r.diastolic}` : r.value;
+    return `${label} ${value} ${unit}`;
 }
 
 function mealFor(time: string): Meal {

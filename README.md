@@ -1,6 +1,6 @@
 # health
 
-A personal tracker for a keto and weight-loss journey. Log daily weight, periodic readings (glucose, ketones, blood pressure, pulse), and food with macros in a small web app. An LLM coach reads the same data through a built-in MCP server.
+A personal tracker for a keto and weight-loss journey. Log daily weight, periodic readings (glucose, ketones, blood pressure), and food with macros in a small web app. An LLM coach reads the same data through a built-in MCP server.
 
 ## Run
 
@@ -28,7 +28,7 @@ Set both `APP_PASSWORD` and `MCP_TOKEN` on any server reachable from the interne
 ## What gets tracked
 
 - **Weight.** One entry per day. Saving again for the same day replaces it.
-- **Readings.** A timestamped reading holds any mix of glucose (mg/dL), ketones (mmol/L), blood pressure (systolic and diastolic together), and pulse. The glucose-ketone index (GKI) is calculated when a reading has both glucose and ketones.
+- **Readings.** Each reading is one type, picked from a dropdown: glucose (mg/dL), ketones (mmol/L), or blood pressure (systolic and diastolic). A ketone reading gets a glucose-ketone index (GKI) when a glucose reading was taken within 30 minutes of it on the same day.
 - **Food.** A timestamped item with a meal, a description, and optional calories, fat, protein, carbs, and fiber in grams. Net carbs are carbs minus fiber.
 
 Dates and times are stored as the local wall-clock values you enter.
@@ -37,12 +37,12 @@ Dates and times are stored as the local wall-clock values you enter.
 
 `/mcp` serves the MCP Streamable HTTP transport in stateless mode. The tools are read-only:
 
-| Tool           | Returns                                                                                  |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| `get_summary`  | Weight trend, reading averages (glucose, ketones, GKI, BP, pulse), average daily macros. |
-| `get_weights`  | Daily weigh-ins.                                                                         |
-| `get_readings` | Every reading with its GKI.                                                              |
-| `get_food_log` | Every food item with net carbs, plus per-day totals.                                     |
+| Tool           | Returns                                                                           |
+| -------------- | --------------------------------------------------------------------------------- |
+| `get_summary`  | Weight trend, reading averages (glucose, ketones, GKI, BP), average daily macros. |
+| `get_weights`  | Daily weigh-ins.                                                                  |
+| `get_readings` | Every reading by type; ketone readings include their GKI.                         |
+| `get_food_log` | Every food item with net carbs, plus per-day totals.                              |
 
 Each tool takes optional `from` and `to` (`YYYY-MM-DD`) or `days` (1 to 366). The default is the last 30 days ending today.
 

@@ -4,7 +4,7 @@ import type { WeightUnit } from './config.js';
 import { lastDays } from './dates.js';
 import { localDate, type DateRange } from './entries.js';
 import type { Store } from './store.js';
-import { dailyTotals, gki, netCarbs, summarize } from './summary.js';
+import { dailyTotals, gkiByKetoneId, netCarbs, summarize } from './summary.js';
 
 export type McpDeps = {
     store: Store;
@@ -37,7 +37,7 @@ export function createMcpServer(deps: McpDeps): McpServer {
             instructions: [
                 'Read-only access to a personal keto and weight-loss log.',
                 `Weight is in ${deps.weightUnit}. Glucose is mg/dL, ketones are mmol/L, blood pressure is mmHg.`,
-                'GKI is the glucose-ketone index (glucose mmol/L divided by ketones).',
+                'GKI is the glucose-ketone index (glucose mmol/L divided by ketones), paired from glucose and ketone readings taken within 30 minutes of each other.',
                 'Food macros are grams; net carbs = carbs - fiber.',
                 'Dates and times are local to the user.'
             ].join(' ')
@@ -101,17 +101,21 @@ export function createMcpServer(deps: McpDeps): McpServer {
         {
             title: 'Metric readings',
             description:
-                'Glucose (mg/dL), ketones (mmol/L), GKI, blood pressure (mmHg) and pulse readings in a date range, oldest first. Absent measurements are null.',
+                'Glucose (mg/dL), ketone (mmol/L) and blood pressure (mmHg) readings in a date range, oldest first. Each reading has a `kind`. Ketone readings include `gki` when a glucose reading was taken within 30 minutes, otherwise null.',
             inputSchema: rangeArgs,
             annotations: readOnly
         },
         args => {
             const range = resolve(args);
+            const readings = store.readings(range);
+            const gki = gkiByKetoneId(readings);
             return json({
                 range,
-                readings: store
-                    .readings(range)
-                    .map(r => ({ ...r, gki: gki(r) }))
+                readings: readings.map(r =>
+                    r.kind === 'ketones'
+                        ? { ...r, gki: gki.get(r.id) ?? null }
+                        : r
+                )
             });
         }
     );

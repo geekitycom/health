@@ -16,11 +16,9 @@ export type WebDeps = {
 
 const NUMERIC_FIELDS = new Set([
     'weight',
-    'glucose',
-    'ketones',
+    'value',
     'systolic',
     'diastolic',
-    'pulse',
     'calories',
     'fat',
     'protein',

@@ -50,6 +50,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
 .stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 .stat span { font-size: .8rem; color: var(--muted); }
+form.reading-form .bp, form.reading-form [data-kind] { display: none; }
+form.reading-form:has(option[value="blood_pressure"]:checked) .bp { display: grid; }
+form.reading-form:has(option[value="blood_pressure"]:checked) .single { display: none; }
+form.reading-form:has(option[value="glucose"]:checked) [data-kind="glucose"],
+form.reading-form:has(option[value="ketones"]:checked) [data-kind="ketones"] { display: inline; }
 svg.spark { width: 100%; height: 80px; }
 svg.spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 `;

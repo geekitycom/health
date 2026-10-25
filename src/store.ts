@@ -11,24 +11,12 @@ import type {
     WeightInput
 } from './entries.js';
 
-const SCHEMA = `
+const BASE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS weights (
     date TEXT PRIMARY KEY,
     weight REAL NOT NULL,
     note TEXT
 );
-CREATE TABLE IF NOT EXISTS readings (
-    id INTEGER PRIMARY KEY,
-    date TEXT NOT NULL,
-    time TEXT NOT NULL,
-    glucose REAL,
-    ketones REAL,
-    systolic INTEGER,
-    diastolic INTEGER,
-    pulse INTEGER,
-    note TEXT
-);
-CREATE INDEX IF NOT EXISTS readings_date ON readings (date, time);
 CREATE TABLE IF NOT EXISTS foods (
     id INTEGER PRIMARY KEY,
     date TEXT NOT NULL,
@@ -45,13 +33,96 @@ CREATE TABLE IF NOT EXISTS foods (
 CREATE INDEX IF NOT EXISTS foods_date ON foods (date, time);
 `;
 
+const READINGS_SCHEMA = `
+CREATE TABLE readings (
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL,
+    time TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('glucose', 'ketones', 'blood_pressure')),
+    value REAL NOT NULL,
+    diastolic INTEGER CHECK ((kind = 'blood_pressure') = (diastolic IS NOT NULL)),
+    note TEXT
+);
+CREATE INDEX readings_date ON readings (date, time);
+`;
+
+// Index i upgrades a database from user_version i to i + 1.
+const MIGRATIONS: ((db: DatabaseSync) => void)[] = [
+    db => {
+        db.exec(BASE_SCHEMA);
+        const legacy = db
+            .prepare(
+                "SELECT 1 FROM pragma_table_info('readings') WHERE name = 'glucose'"
+            )
+            .get();
+        if (!legacy) {
+            db.exec(READINGS_SCHEMA);
+            return;
+        }
+        // 0.1.0 stored glucose, ketones, blood pressure and pulse in one row.
+        // Split each measurement into its own row; pulse is dropped.
+        db.exec(`
+            ALTER TABLE readings RENAME TO readings_v0;
+            DROP INDEX IF EXISTS readings_date;
+            ${READINGS_SCHEMA}
+            INSERT INTO readings (date, time, kind, value, diastolic, note)
+            SELECT date, time, kind, value, diastolic, note FROM (
+                SELECT id, date, time, 'glucose' AS kind, glucose AS value,
+                       NULL AS diastolic, note, 0 AS ord
+                FROM readings_v0 WHERE glucose IS NOT NULL
+                UNION ALL
+                SELECT id, date, time, 'ketones', ketones, NULL, note, 1
+                FROM readings_v0 WHERE ketones IS NOT NULL
+                UNION ALL
+                SELECT id, date, time, 'blood_pressure', systolic, diastolic, note, 2
+                FROM readings_v0
+                WHERE systolic IS NOT NULL AND diastolic IS NOT NULL
+            ) ORDER BY id, ord;
+            DROP TABLE readings_v0;
+        `);
+    }
+];
+
+type ReadingRow = {
+    id: number;
+    date: string;
+    time: string;
+    kind: Reading['kind'];
+    value: number;
+    diastolic: number | null;
+    note: string | null;
+};
+
+function toReading({ kind, value, diastolic, ...rest }: ReadingRow): Reading {
+    return kind === 'blood_pressure'
+        ? { ...rest, kind, systolic: value, diastolic: diastolic ?? 0 }
+        : { ...rest, kind, value };
+}
+
+function migrate(db: DatabaseSync) {
+    const { user_version: version } = db
+        .prepare('PRAGMA user_version')
+        .get() as { user_version: number };
+    for (let v = version; v < MIGRATIONS.length; v++) {
+        db.exec('BEGIN');
+        try {
+            MIGRATIONS[v]?.(db);
+            db.exec(`PRAGMA user_version = ${v + 1}`);
+            db.exec('COMMIT');
+        } catch (error) {
+            db.exec('ROLLBACK');
+            throw error;
+        }
+    }
+}
+
 export type Store = ReturnType<typeof openStore>;
 
 export function openStore(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     const db = new DatabaseSync(path);
     db.exec('PRAGMA journal_mode = WAL;');
-    db.exec(SCHEMA);
+    migrate(db);
 
     const all = <T>(sql: string, ...params: SQLInputValue[]) =>
         db.prepare(sql).all(...params) as T[];
@@ -88,18 +159,16 @@ export function openStore(path: string) {
         },
 
         addReading(input: ReadingInput): number {
+            const bp = input.kind === 'blood_pressure';
             return Number(
                 run(
-                    `INSERT INTO readings
-                     (date, time, glucose, ketones, systolic, diastolic, pulse, note)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO readings (date, time, kind, value, diastolic, note)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
                     input.date,
                     input.time,
-                    nullable(input.glucose),
-                    nullable(input.ketones),
-                    nullable(input.systolic),
-                    nullable(input.diastolic),
-                    nullable(input.pulse),
+                    input.kind,
+                    bp ? input.systolic : input.value,
+                    bp ? input.diastolic : null,
                     nullable(input.note)
                 ).lastInsertRowid
             );
@@ -108,12 +177,12 @@ export function openStore(path: string) {
             run('DELETE FROM readings WHERE id = ?', id);
         },
         readings(range: DateRange): Reading[] {
-            return all(
+            return all<ReadingRow>(
                 `SELECT * FROM readings WHERE date BETWEEN ? AND ?
                  ORDER BY date, time, id`,
                 range.from,
                 range.to
-            );
+            ).map(toReading);
         },
 
         addFood(input: FoodInput): number {

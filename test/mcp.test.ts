@@ -28,12 +28,19 @@ function seed(store: ReturnType<typeof harness>['store']) {
     store.addReading({
         date: '2026-10-25',
         time: '07:00',
-        glucose: 90,
-        ketones: 1.5
+        kind: 'glucose',
+        value: 90
+    });
+    store.addReading({
+        date: '2026-10-25',
+        time: '07:10',
+        kind: 'ketones',
+        value: 1.5
     });
     store.addReading({
         date: '2026-10-25',
         time: '19:00',
+        kind: 'blood_pressure',
         systolic: 122,
         diastolic: 80
     });
@@ -92,9 +99,33 @@ describe('MCP server', () => {
             netCarbs: 2
         });
         const readings = await call(client, 'get_readings', { days: 1 });
-        expect(readings.readings.map((r: { gki: number }) => r.gki)).toEqual([
-            3.3,
-            null
+        expect(readings.readings).toEqual([
+            {
+                id: 1,
+                date: '2026-10-25',
+                time: '07:00',
+                kind: 'glucose',
+                value: 90,
+                note: null
+            },
+            {
+                id: 2,
+                date: '2026-10-25',
+                time: '07:10',
+                kind: 'ketones',
+                value: 1.5,
+                note: null,
+                gki: 3.3
+            },
+            {
+                id: 3,
+                date: '2026-10-25',
+                time: '19:00',
+                kind: 'blood_pressure',
+                systolic: 122,
+                diastolic: 80,
+                note: null
+            }
         ]);
     });
 

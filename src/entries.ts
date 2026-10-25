@@ -19,28 +19,34 @@ export const weightInput = z.object({
 });
 export type WeightInput = z.infer<typeof weightInput>;
 
-export const readingInput = z
-    .object({
-        date: localDate,
-        time: localTime,
-        glucose: positive.max(1000).optional(),
-        ketones: nonNegative.max(20).optional(),
-        systolic: z.int().positive().max(300).optional(),
-        diastolic: z.int().positive().max(200).optional(),
-        pulse: z.int().positive().max(300).optional(),
-        note
+export const READING_KINDS = {
+    glucose: { label: 'Glucose', unit: 'mg/dL' },
+    ketones: { label: 'Ketones', unit: 'mmol/L' },
+    blood_pressure: { label: 'Blood pressure', unit: 'mmHg' }
+} as const;
+export type ReadingKind = keyof typeof READING_KINDS;
+
+const readingBase = { date: localDate, time: localTime, note };
+const bloodPressure = z.int().positive().max(300);
+
+export const readingInput = z.discriminatedUnion('kind', [
+    z.object({
+        ...readingBase,
+        kind: z.literal('glucose'),
+        value: positive.max(1000)
+    }),
+    z.object({
+        ...readingBase,
+        kind: z.literal('ketones'),
+        value: nonNegative.max(20)
+    }),
+    z.object({
+        ...readingBase,
+        kind: z.literal('blood_pressure'),
+        systolic: bloodPressure,
+        diastolic: bloodPressure
     })
-    .refine(r => (r.systolic === undefined) === (r.diastolic === undefined), {
-        message: 'blood pressure needs both systolic and diastolic'
-    })
-    .refine(
-        r =>
-            r.glucose !== undefined ||
-            r.ketones !== undefined ||
-            r.systolic !== undefined ||
-            r.pulse !== undefined,
-        { message: 'enter at least one measurement' }
-    );
+]);
 export type ReadingInput = z.infer<typeof readingInput>;
 
 export const foodInput = z.object({
@@ -63,17 +69,16 @@ export type Weight = {
     note: string | null;
 };
 
+export type ReadingValue =
+    | { kind: 'glucose' | 'ketones'; value: number }
+    | { kind: 'blood_pressure'; systolic: number; diastolic: number };
+
 export type Reading = {
     id: number;
     date: string;
     time: string;
-    glucose: number | null;
-    ketones: number | null;
-    systolic: number | null;
-    diastolic: number | null;
-    pulse: number | null;
     note: string | null;
-};
+} & ReadingValue;
 
 export type Food = {
     id: number;

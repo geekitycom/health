@@ -31,12 +31,44 @@ describe('web UI', () => {
         await post('/readings', {
             date: '2026-10-25',
             time: '07:00',
-            glucose: '90',
-            ketones: '1.5'
+            kind: 'glucose',
+            value: '90'
+        });
+        await post('/readings', {
+            date: '2026-10-25',
+            time: '07:20',
+            kind: 'ketones',
+            value: '1.5'
         });
         const html = await (await app.request('/?date=2026-10-25')).text();
         expect(html).toContain('-1.5 lb since 2026-10-24');
+        expect(html).toContain('Ketones 1.5 mmol/L');
         expect(html).toContain('<td class="num">3.3</td>');
+    });
+
+    it('records one kind of reading and ignores fields for other kinds', async () => {
+        const { post, store } = harness();
+        await post('/readings', {
+            date: '2026-10-25',
+            time: '08:00',
+            kind: 'blood_pressure',
+            value: '1.2',
+            systolic: '118',
+            diastolic: '76'
+        });
+        expect(
+            store.readings({ from: '2026-10-25', to: '2026-10-25' })
+        ).toEqual([
+            {
+                id: 1,
+                date: '2026-10-25',
+                time: '08:00',
+                kind: 'blood_pressure',
+                systolic: 118,
+                diastolic: 76,
+                note: null
+            }
+        ]);
     });
 
     it('rejects a reading with half a blood pressure', async () => {
@@ -44,6 +76,7 @@ describe('web UI', () => {
         const res = await post('/readings', {
             date: '2026-10-25',
             time: '07:00',
+            kind: 'blood_pressure',
             systolic: '120'
         });
         expect(res.headers.get('location')).toContain('error=');
