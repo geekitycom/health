@@ -3,6 +3,7 @@ export type WeightUnit = 'lb' | 'kg';
 export type Config = {
     port: number;
     databasePath: string;
+    publicUrl: URL | undefined;
     timeZone: string;
     weightUnit: WeightUnit;
     appPassword: string | undefined;
@@ -15,11 +16,26 @@ export function loadConfig(env: Env): Config {
     return {
         port: positiveInt(env, 'PORT', 3000, 65535),
         databasePath: env.DATABASE_PATH || 'data/health.db',
+        publicUrl: publicUrl(env.PUBLIC_URL),
         timeZone: timeZone(env.TIME_ZONE),
         weightUnit: weightUnit(env.WEIGHT_UNIT),
         appPassword: env.APP_PASSWORD || undefined,
         mcpToken: env.MCP_TOKEN || undefined
     };
+}
+
+function publicUrl(raw: string | undefined): URL | undefined {
+    if (!raw) return undefined;
+    let url: URL;
+    try {
+        url = new URL(raw);
+    } catch {
+        throw new Error(`PUBLIC_URL is not a valid URL: ${raw}`);
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+        throw new Error(`PUBLIC_URL must be http or https: ${raw}`);
+    }
+    return url;
 }
 
 function timeZone(raw: string | undefined): string {

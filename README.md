@@ -14,14 +14,15 @@ Open http://localhost:3000. The data lives in one SQLite file (`data/health.db` 
 
 ## Configuration
 
-| Variable        | Default          | Purpose                                                                |
-| --------------- | ---------------- | ---------------------------------------------------------------------- |
-| `PORT`          | `3000`           | HTTP port.                                                             |
-| `DATABASE_PATH` | `data/health.db` | SQLite file. The Docker image uses `/data/health.db`.                  |
-| `TIME_ZONE`     | system zone      | IANA zone that decides what "today" is, for example `America/Chicago`. |
-| `WEIGHT_UNIT`   | `lb`             | `lb` or `kg`. Weights are stored as entered.                           |
-| `APP_PASSWORD`  | unset (open)     | Protects the web UI with a sign-in form and a 90-day session cookie.   |
-| `MCP_TOKEN`     | unset (open)     | Bearer token required on `/mcp`.                                       |
+| Variable        | Default              | Purpose                                                                         |
+| --------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `PORT`          | `3000`               | HTTP port.                                                                      |
+| `PUBLIC_URL`    | from request headers | Public origin used in OAuth metadata, for example `https://health.example.com`. |
+| `DATABASE_PATH` | `data/health.db`     | SQLite file. The Docker image uses `/data/health.db`.                           |
+| `TIME_ZONE`     | system zone          | IANA zone that decides what "today" is, for example `America/Chicago`.          |
+| `WEIGHT_UNIT`   | `lb`                 | `lb` or `kg`. Weights are stored as entered.                                    |
+| `APP_PASSWORD`  | unset (open)         | Protects the web UI with a sign-in form and a 90-day session cookie.            |
+| `MCP_TOKEN`     | unset (open)         | Static bearer token that `/mcp` accepts alongside OAuth tokens.                 |
 
 Set both `APP_PASSWORD` and `MCP_TOKEN` on any server reachable from the internet.
 
@@ -46,7 +47,13 @@ Dates and times are stored as the local wall-clock values you enter.
 
 Each tool takes optional `from` and `to` (`YYYY-MM-DD`) or `days` (1 to 366). The default is the last 30 days ending today.
 
-Claude Code example:
+### Connecting
+
+When `APP_PASSWORD` or `MCP_TOKEN` is set, `/mcp` requires a bearer token. There are two ways to get one.
+
+**OAuth (claude.ai, Claude Desktop, and other remote connectors).** Add `https://health.example.com/mcp` as a custom connector and leave the OAuth client fields empty. The client registers itself, sends you to the app's sign-in page, and asks you to allow read access. Access tokens last a day and refresh automatically; refresh tokens last a year.
+
+**Static token (Claude Code and other clients that send headers).**
 
 ```sh
 claude mcp add --transport http health https://health.example.com/mcp \

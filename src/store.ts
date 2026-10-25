@@ -10,6 +10,7 @@ import type {
     Weight,
     WeightInput
 } from './entries.js';
+import { OAUTH_SCHEMA, oauthStore } from './oauth/store.js';
 
 const BASE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS weights (
@@ -80,7 +81,8 @@ const MIGRATIONS: ((db: DatabaseSync) => void)[] = [
             ) ORDER BY id, ord;
             DROP TABLE readings_v0;
         `);
-    }
+    },
+    db => db.exec(OAUTH_SCHEMA)
 ];
 
 type ReadingRow = {
@@ -121,7 +123,7 @@ export type Store = ReturnType<typeof openStore>;
 export function openStore(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     const db = new DatabaseSync(path);
-    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
     migrate(db);
 
     const all = <T>(sql: string, ...params: SQLInputValue[]) =>
@@ -131,6 +133,8 @@ export function openStore(path: string) {
     const nullable = (value: string | number | undefined) => value ?? null;
 
     return {
+        oauth: oauthStore(db),
+
         upsertWeight(input: WeightInput) {
             run(
                 `INSERT INTO weights (date, weight, note) VALUES (?, ?, ?)

@@ -1,11 +1,12 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { Hono } from 'hono';
-import { bearerAuth } from 'hono/bearer-auth';
+import { cors } from 'hono/cors';
 import type { Config } from './config.js';
 import { localNow } from './dates.js';
 import { createMcpServer } from './mcp.js';
 import type { Store } from './store.js';
-import { passwordAuth, safeEqual } from './web/auth.js';
+import { oauthRoutes } from './oauth/routes.js';
+import { passwordAuth } from './web/auth.js';
 import { webRoutes } from './web/routes.js';
 
 export type AppDeps = {
@@ -21,13 +22,21 @@ export function createApp(deps: AppDeps) {
 
     app.get('/health', c => c.json({ ok: true }));
 
-    if (config.mcpToken) {
-        app.use(
-            '/mcp',
-            bearerAuth({
-                verifyToken: token => safeEqual(token, config.mcpToken ?? '')
-            })
-        );
+    const auth = config.appPassword
+        ? passwordAuth({ password: config.appPassword, now: deps.now })
+        : undefined;
+    const oauth = oauthRoutes({
+        oauth: store.oauth,
+        now: deps.now,
+        publicUrl: config.publicUrl,
+        requireSession: auth?.requireSession,
+        staticToken: config.mcpToken
+    });
+    app.route('/', oauth.routes);
+
+    app.use('/mcp', cors({ origin: '*', exposeHeaders: ['WWW-Authenticate'] }));
+    if (config.appPassword || config.mcpToken) {
+        app.use('/mcp', oauth.requireMcpAuth);
     }
     app.all('/mcp', async c => {
         const server = createMcpServer({
@@ -42,11 +51,7 @@ export function createApp(deps: AppDeps) {
         return transport.handleRequest(c.req.raw);
     });
 
-    if (config.appPassword) {
-        const auth = passwordAuth({
-            password: config.appPassword,
-            now: deps.now
-        });
+    if (auth) {
         app.route('/', auth.routes);
         app.use('*', auth.requireSession);
     }
