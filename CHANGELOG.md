@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/geekitycom/health/compare/health-v0.1.2...health-v0.1.3) (2026-10-25)
+
+
+### Features
+
+* add daily goals the coach can create through MCP ([1674af2](https://github.com/geekitycom/health/commit/1674af2ac1ad2c999f3556d6fdc43a35eafa8fb7))
+
 ## [0.1.2](https://github.com/geekitycom/health/compare/health-v0.1.1...health-v0.1.2) (2026-10-25)
 
 
