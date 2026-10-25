@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/geekitycom/health/compare/health-v0.1.0...health-v0.1.1) (2026-10-25)
+
+
+### Features
+
+* record one reading type at a time and drop pulse ([dbf77ac](https://github.com/geekitycom/health/commit/dbf77ac9c5ee20ae75ebc55cbbd7c9ef9c560705))
+* sign in with a login form instead of HTTP Basic auth ([5de6d90](https://github.com/geekitycom/health/commit/5de6d900408899bf5fe0a4f9a7a7178d117b064e))
+
 ## 0.1.0 (2026-10-25)
 
 
