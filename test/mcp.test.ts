@@ -1,26 +1,6 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { describe, expect, it } from 'vitest';
 import { harness } from './support/harness.js';
-
-async function connect(app: ReturnType<typeof harness>['app'], token?: string) {
-    const client = new Client({ name: 'test', version: '0.0.0' });
-    await client.connect(
-        new StreamableHTTPClientTransport(new URL('http://local/mcp'), {
-            fetch: async (url, init) => app.request(String(url), init),
-            requestInit: token
-                ? { headers: { authorization: `Bearer ${token}` } }
-                : {}
-        })
-    );
-    return client;
-}
-
-async function call(client: Client, name: string, args = {}) {
-    const result = await client.callTool({ name, arguments: args });
-    const [content] = result.content as { type: string; text: string }[];
-    return JSON.parse(content?.text ?? 'null');
-}
+import { call, connect } from './support/mcp.js';
 
 function seed(store: ReturnType<typeof harness>['store']) {
     store.upsertWeight({ date: '2026-10-01', weight: 225 });
@@ -57,17 +37,25 @@ function seed(store: ReturnType<typeof harness>['store']) {
 }
 
 describe('MCP server', () => {
-    it('lists read-only tools', async () => {
+    it('only lets goal tools write', async () => {
         const { app } = harness();
         const client = await connect(app);
         const { tools } = await client.listTools();
+        const writers = tools
+            .filter(t => !t.annotations?.readOnlyHint)
+            .map(t => t.name)
+            .sort();
+        expect(writers).toEqual(['create_goal', 'end_goal']);
         expect(tools.map(t => t.name).sort()).toEqual([
+            'create_goal',
+            'end_goal',
             'get_food_log',
+            'get_goal_answers',
             'get_readings',
             'get_summary',
-            'get_weights'
+            'get_weights',
+            'list_goals'
         ]);
-        expect(tools.every(t => t.annotations?.readOnlyHint)).toBe(true);
     });
 
     it('summarizes the last 30 days by default', async () => {
@@ -133,6 +121,6 @@ describe('MCP server', () => {
         const { app } = harness({ MCP_TOKEN: 'tok', APP_PASSWORD: 'pw' });
         await expect(connect(app)).rejects.toThrow();
         const client = await connect(app, 'tok');
-        expect((await client.listTools()).tools.length).toBe(4);
+        expect((await client.listTools()).tools.length).toBe(8);
     });
 });

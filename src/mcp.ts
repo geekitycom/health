@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { WeightUnit } from './config.js';
 import { lastDays } from './dates.js';
 import { localDate, type DateRange } from './entries.js';
+import { registerGoalTools } from './goals/tools.js';
 import type { Store } from './store.js';
 import { dailyTotals, gkiByKetoneId, netCarbs, summarize } from './summary.js';
 
@@ -35,7 +36,8 @@ export function createMcpServer(deps: McpDeps): McpServer {
         { name: 'health', version: '0.1.0' },
         {
             instructions: [
-                'Read-only access to a personal keto and weight-loss log.',
+                'Access to a personal keto and weight-loss log. Logged data is read-only.',
+                'You can also manage daily goals: questions the user answers once a day (yes/no, multiple choice, or text). Check list_goals before creating one to avoid duplicates.',
                 `Weight is in ${deps.weightUnit}. Glucose is mg/dL, ketones are mmol/L, blood pressure is mmHg.`,
                 'GKI is the glucose-ketone index (glucose mmol/L divided by ketones), paired from glucose and ketone readings taken within 30 minutes of each other.',
                 'Food macros are grams; net carbs = carbs - fiber.',
@@ -66,7 +68,7 @@ export function createMcpServer(deps: McpDeps): McpServer {
         {
             title: 'Progress summary',
             description:
-                'Weight trend, metric averages (glucose, ketones, GKI, blood pressure) and average daily macros over a date range. Start here.',
+                'Weight trend, metric averages (glucose, ketones, GKI, blood pressure), average daily macros and daily goal adherence over a date range. Start here.',
             inputSchema: rangeArgs,
             annotations: readOnly
         },
@@ -139,6 +141,13 @@ export function createMcpServer(deps: McpDeps): McpServer {
             });
         }
     );
+
+    registerGoalTools(server, {
+        goals: store.goals,
+        today: deps.today,
+        resolve,
+        rangeArgs
+    });
 
     return server;
 }

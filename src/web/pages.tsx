@@ -15,6 +15,8 @@ import {
     netCarbs,
     type DayTotals
 } from '../summary.js';
+import type { Goal, GoalAnswer } from '../goals/model.js';
+import { GoalsSection } from './goals.js';
 import { Layout } from './layout.js';
 
 const READING_KIND_LIST = Object.keys(READING_KINDS) as ReadingKind[];
@@ -23,6 +25,8 @@ export type DayPageProps = {
     date: string;
     isToday: boolean;
     defaultTime: string;
+    goals: Goal[];
+    goalAnswers: GoalAnswer[];
     weightUnit: WeightUnit;
     signOut: boolean;
     weight: Weight | undefined;
@@ -57,6 +61,12 @@ export function DayPage(p: DayPageProps) {
                     <a href={`/?date=${addDays(p.date, 1)}`}>Next →</a>
                 )}
             </section>
+
+            <GoalsSection
+                date={p.date}
+                goals={p.goals}
+                answers={p.goalAnswers}
+            />
 
             <section>
                 <h2>Weight</h2>

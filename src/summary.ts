@@ -1,4 +1,5 @@
 import type { DateRange, Food, Reading } from './entries.js';
+import { goalStats } from './goals/report.js';
 import type { Store } from './store.js';
 
 const GLUCOSE_MG_DL_PER_MMOL_L = 18.016;
@@ -102,6 +103,11 @@ export function summarize(store: Store, range: DateRange) {
             systolic: stats(bp.map(r => r.systolic)),
             diastolic: stats(bp.map(r => r.diastolic))
         },
+        goals: goalStats(
+            store.goals.goalsInRange(range),
+            store.goals.answers(range),
+            range
+        ),
         food: {
             daysLogged: days.length,
             averagePerLoggedDay: days.length

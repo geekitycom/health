@@ -55,6 +55,13 @@ form.reading-form:has(option[value="blood_pressure"]:checked) .bp { display: gri
 form.reading-form:has(option[value="blood_pressure"]:checked) .single { display: none; }
 form.reading-form:has(option[value="glucose"]:checked) [data-kind="glucose"],
 form.reading-form:has(option[value="ketones"]:checked) [data-kind="ketones"] { display: inline; }
+ul.goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+ul.goals li { display: grid; gap: 8px; }
+.goal-choices { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.goal-text { display: flex; gap: 8px; }
+.goal-text input { flex: 1; }
+button.choice { background: var(--bg); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+button.choice[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 svg.spark { width: 100%; height: 80px; }
 svg.spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 `;

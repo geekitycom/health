@@ -10,6 +10,7 @@ import type {
     Weight,
     WeightInput
 } from './entries.js';
+import { GOALS_SCHEMA, goalsStore } from './goals/store.js';
 import { OAUTH_SCHEMA, oauthStore } from './oauth/store.js';
 
 const BASE_SCHEMA = `
@@ -82,7 +83,8 @@ const MIGRATIONS: ((db: DatabaseSync) => void)[] = [
             DROP TABLE readings_v0;
         `);
     },
-    db => db.exec(OAUTH_SCHEMA)
+    db => db.exec(OAUTH_SCHEMA),
+    db => db.exec(GOALS_SCHEMA)
 ];
 
 type ReadingRow = {
@@ -134,6 +136,7 @@ export function openStore(path: string) {
 
     return {
         oauth: oauthStore(db),
+        goals: goalsStore(db),
 
         upsertWeight(input: WeightInput) {
             run(

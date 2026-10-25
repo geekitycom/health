@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { WeightUnit } from '../config.js';
 import { addDays, isValidDate, lastDays, type LocalNow } from '../dates.js';
 import { foodInput, readingInput, weightInput } from '../entries.js';
+import { isActiveOn, parseAnswer } from '../goals/model.js';
 import type { Store } from '../store.js';
 import { safePath } from './auth.js';
 import { DayPage, HistoryPage } from './pages.js';
@@ -39,6 +40,8 @@ export function webRoutes(deps: WebDeps) {
                 date={date}
                 isToday={date === now.date}
                 defaultTime={date === now.date ? now.time : '08:00'}
+                goals={store.goals.goalsInRange({ from: date, to: date })}
+                goalAnswers={store.goals.answers({ from: date, to: date })}
                 weightUnit={deps.weightUnit}
                 signOut={deps.signOut}
                 weight={store.weights({ from: date, to: date })[0]}
@@ -71,6 +74,36 @@ export function webRoutes(deps: WebDeps) {
                 foods={store.foods(range)}
             />
         );
+    });
+
+    app.post('/goals/:id/answer', async c => {
+        const body = await c.req.parseBody();
+        const date = String(body.date ?? '');
+        const raw = String(body.value ?? '');
+        const back = `/?date=${encodeURIComponent(date)}`;
+        const goal = store.goals.goal(Number(c.req.param('id')));
+        const fail = (message: string) =>
+            c.redirect(
+                `${back}&error=${encodeURIComponent(message)}#goals`,
+                303
+            );
+        if (!goal || !isValidDate(date)) return fail('Unknown goal or date.');
+        if (raw.trim() === '') {
+            store.goals.clearAnswer(goal.id, date);
+            return c.redirect(`${back}#goals`, 303);
+        }
+        if (!isActiveOn(goal, date))
+            return fail('That goal is not asked on this day.');
+        const value = parseAnswer(goal, raw);
+        if (value === undefined)
+            return fail(`Not a valid answer for "${goal.prompt}".`);
+        store.goals.setAnswer({
+            goalId: goal.id,
+            date,
+            value,
+            answeredAt: deps.now().time
+        });
+        return c.redirect(`${back}#goals`, 303);
     });
 
     const save = <S extends z.ZodType>(

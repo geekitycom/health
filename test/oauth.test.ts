@@ -135,7 +135,7 @@ describe('OAuth for remote MCP clients', () => {
 
         const client = new Client({ name: 't', version: '0' });
         await client.connect(transport(app, provider));
-        expect((await client.listTools()).tools).toHaveLength(4);
+        expect((await client.listTools()).tools).toHaveLength(8);
     });
 
     it('rotates refresh tokens', async () => {
