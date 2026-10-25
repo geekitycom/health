@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/geekitycom/health/compare/health-v0.1.1...health-v0.1.2) (2026-10-25)
+
+
+### Features
+
+* add OAuth 2.1 sign-in for remote MCP connectors ([47fa1d3](https://github.com/geekitycom/health/commit/47fa1d3382695c875129e185536c4804c1edf736))
+
 ## [0.1.1](https://github.com/geekitycom/health/compare/health-v0.1.0...health-v0.1.1) (2026-10-25)
 
 
