@@ -327,8 +327,8 @@ function ConsentPage(p: AuthorizationRequest) {
                 <h2>Connect {p.clientName ?? 'an app'}?</h2>
                 <p>
                     {p.clientName ?? 'This app'} will be able to read your
-                    weights, readings, food log and goal answers, and create and
-                    end daily goals. It cannot change anything you have logged.
+                    weights, readings and goal answers, and create and end daily
+                    goals. It cannot change anything you have logged.
                 </p>
                 <p class="muted">
                     It will return to {new URL(p.redirectUri).host}.

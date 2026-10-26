@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { z } from 'zod';
 import type { WeightUnit } from '../config.js';
 import { addDays, isValidDate, lastDays, type LocalNow } from '../dates.js';
-import { foodInput, readingInput, weightInput } from '../entries.js';
+import { readingInput, weightInput } from '../entries.js';
 import { isActiveOn, parseAnswer } from '../goals/model.js';
 import type { Store } from '../store.js';
 import { safePath } from './auth.js';
@@ -15,17 +15,7 @@ export type WebDeps = {
     now(): LocalNow;
 };
 
-const NUMERIC_FIELDS = new Set([
-    'weight',
-    'value',
-    'systolic',
-    'diastolic',
-    'calories',
-    'fat',
-    'protein',
-    'carbs',
-    'fiber'
-]);
+const NUMERIC_FIELDS = new Set(['weight', 'value', 'systolic', 'diastolic']);
 
 export function webRoutes(deps: WebDeps) {
     const { store } = deps;
@@ -47,7 +37,6 @@ export function webRoutes(deps: WebDeps) {
                 weight={store.weights({ from: date, to: date })[0]}
                 previousWeight={store.latestWeightBefore(date)}
                 readings={store.readings({ from: date, to: date })}
-                foods={store.foods({ from: date, to: date })}
                 recentWeights={store.weights(lastDays(date, 30))}
                 error={c.req.query('error')}
             />
@@ -71,7 +60,6 @@ export function webRoutes(deps: WebDeps) {
                 dates={dates}
                 weights={store.weights(range)}
                 readings={store.readings(range)}
-                foods={store.foods(range)}
             />
         );
     });
@@ -134,7 +122,6 @@ export function webRoutes(deps: WebDeps) {
 
     save('/weights', weightInput, input => store.upsertWeight(input));
     save('/readings', readingInput, input => store.addReading(input));
-    save('/foods', foodInput, input => store.addFood(input));
 
     const remove = (path: string, del: (key: string) => void) =>
         app.post(path, async c => {
@@ -145,7 +132,6 @@ export function webRoutes(deps: WebDeps) {
 
     remove('/weights/:key/delete', date => store.deleteWeight(date));
     remove('/readings/:key/delete', id => store.deleteReading(Number(id)));
-    remove('/foods/:key/delete', id => store.deleteFood(Number(id)));
 
     return app;
 }

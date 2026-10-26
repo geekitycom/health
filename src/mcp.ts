@@ -5,7 +5,7 @@ import { lastDays } from './dates.js';
 import { localDate, type DateRange } from './entries.js';
 import { registerGoalTools } from './goals/tools.js';
 import type { Store } from './store.js';
-import { dailyTotals, gkiByKetoneId, netCarbs, summarize } from './summary.js';
+import { gkiByKetoneId, summarize } from './summary.js';
 
 export type McpDeps = {
     store: Store;
@@ -40,7 +40,6 @@ export function createMcpServer(deps: McpDeps): McpServer {
                 'You can also manage daily goals: questions the user answers once a day (yes/no, multiple choice, or text). Check list_goals before creating one to avoid duplicates.',
                 `Weight is in ${deps.weightUnit}. Glucose is mg/dL, ketones are mmol/L, blood pressure is mmHg.`,
                 'GKI is the glucose-ketone index (glucose mmol/L divided by ketones), paired from glucose and ketone readings taken within 30 minutes of each other.',
-                'Food macros are grams; net carbs = carbs - fiber.',
                 'Dates and times are local to the user.'
             ].join(' ')
         }
@@ -68,7 +67,7 @@ export function createMcpServer(deps: McpDeps): McpServer {
         {
             title: 'Progress summary',
             description:
-                'Weight trend, metric averages (glucose, ketones, GKI, blood pressure), average daily macros and daily goal adherence over a date range. Start here.',
+                'Weight trend, metric averages (glucose, ketones, GKI, blood pressure) and daily goal adherence over a date range. Start here.',
             inputSchema: rangeArgs,
             annotations: readOnly
         },
@@ -118,26 +117,6 @@ export function createMcpServer(deps: McpDeps): McpServer {
                         ? { ...r, gki: gki.get(r.id) ?? null }
                         : r
                 )
-            });
-        }
-    );
-
-    server.registerTool(
-        'get_food_log',
-        {
-            title: 'Food log',
-            description:
-                'Every logged food item with macros (grams) and per-day totals including net carbs, in a date range.',
-            inputSchema: rangeArgs,
-            annotations: readOnly
-        },
-        args => {
-            const range = resolve(args);
-            const foods = store.foods(range);
-            return json({
-                range,
-                dailyTotals: dailyTotals(foods),
-                items: foods.map(f => ({ ...f, netCarbs: netCarbs(f) }))
             });
         }
     );

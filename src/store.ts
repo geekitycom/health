@@ -3,8 +3,6 @@ import { dirname } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import type {
     DateRange,
-    Food,
-    FoodInput,
     Reading,
     ReadingInput,
     Weight,
@@ -19,20 +17,6 @@ CREATE TABLE IF NOT EXISTS weights (
     weight REAL NOT NULL,
     note TEXT
 );
-CREATE TABLE IF NOT EXISTS foods (
-    id INTEGER PRIMARY KEY,
-    date TEXT NOT NULL,
-    time TEXT NOT NULL,
-    meal TEXT NOT NULL,
-    description TEXT NOT NULL,
-    calories REAL,
-    fat REAL,
-    protein REAL,
-    carbs REAL,
-    fiber REAL,
-    note TEXT
-);
-CREATE INDEX IF NOT EXISTS foods_date ON foods (date, time);
 `;
 
 const READINGS_SCHEMA = `
@@ -190,37 +174,6 @@ export function openStore(path: string) {
                 range.from,
                 range.to
             ).map(toReading);
-        },
-
-        addFood(input: FoodInput): number {
-            return Number(
-                run(
-                    `INSERT INTO foods
-                     (date, time, meal, description, calories, fat, protein, carbs, fiber, note)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    input.date,
-                    input.time,
-                    input.meal,
-                    input.description,
-                    nullable(input.calories),
-                    nullable(input.fat),
-                    nullable(input.protein),
-                    nullable(input.carbs),
-                    nullable(input.fiber),
-                    nullable(input.note)
-                ).lastInsertRowid
-            );
-        },
-        deleteFood(id: number) {
-            run('DELETE FROM foods WHERE id = ?', id);
-        },
-        foods(range: DateRange): Food[] {
-            return all(
-                `SELECT * FROM foods WHERE date BETWEEN ? AND ?
-                 ORDER BY date, time, id`,
-                range.from,
-                range.to
-            );
         },
 
         close() {

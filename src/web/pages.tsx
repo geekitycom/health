@@ -1,20 +1,12 @@
 import type { WeightUnit } from '../config.js';
 import { addDays } from '../dates.js';
 import {
-    MEALS,
     READING_KINDS,
-    type Food,
-    type Meal,
     type Reading,
     type ReadingKind,
     type Weight
 } from '../entries.js';
-import {
-    dailyTotals,
-    gkiByKetoneId,
-    netCarbs,
-    type DayTotals
-} from '../summary.js';
+import { gkiByKetoneId } from '../summary.js';
 import type { Goal, GoalAnswer } from '../goals/model.js';
 import { GoalsSection } from './goals.js';
 import { Layout } from './layout.js';
@@ -32,13 +24,11 @@ export type DayPageProps = {
     weight: Weight | undefined;
     previousWeight: Weight | undefined;
     readings: Reading[];
-    foods: Food[];
     recentWeights: Weight[];
     error: string | undefined;
 };
 
 export function DayPage(p: DayPageProps) {
-    const totals = dailyTotals(p.foods)[0];
     const change =
         p.weight && p.previousWeight
             ? p.weight.weight - p.previousWeight.weight
@@ -206,106 +196,6 @@ export function DayPage(p: DayPageProps) {
                     </div>
                 )}
             </section>
-
-            <section>
-                <h2>Food</h2>
-                <form class="entry" method="post" action="/foods">
-                    <input type="hidden" name="date" value={p.date} />
-                    <label>
-                        Time
-                        <input
-                            name="time"
-                            type="time"
-                            value={p.defaultTime}
-                            required
-                        />
-                    </label>
-                    <label>
-                        Meal
-                        <select name="meal">
-                            {MEALS.map(m => (
-                                <option
-                                    value={m}
-                                    selected={m === mealFor(p.defaultTime)}
-                                >
-                                    {m}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <label class="wide">
-                        What
-                        <input name="description" required />
-                    </label>
-                    <NumberField name="calories" label="Calories" step="1" />
-                    <NumberField name="fat" label="Fat (g)" step="0.1" />
-                    <NumberField
-                        name="protein"
-                        label="Protein (g)"
-                        step="0.1"
-                    />
-                    <NumberField name="carbs" label="Carbs (g)" step="0.1" />
-                    <NumberField name="fiber" label="Fiber (g)" step="0.1" />
-                    <label class="wide">
-                        Note
-                        <input name="note" />
-                    </label>
-                    <button type="submit">Add food</button>
-                </form>
-                {p.foods.length > 0 && (
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Food</th>
-                                    <th class="num">Cal</th>
-                                    <th class="num">Fat</th>
-                                    <th class="num">Protein</th>
-                                    <th class="num">Net carbs</th>
-                                    <th />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {p.foods.map(f => (
-                                    <tr>
-                                        <td>{f.time}</td>
-                                        <td>
-                                            {f.description}{' '}
-                                            <span class="muted">{f.meal}</span>
-                                            {f.note && (
-                                                <div class="muted">
-                                                    {f.note}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td class="num">{f.calories ?? ''}</td>
-                                        <td class="num">{f.fat ?? ''}</td>
-                                        <td class="num">{f.protein ?? ''}</td>
-                                        <td class="num">{netCarbs(f) ?? ''}</td>
-                                        <td>
-                                            <DeleteButton
-                                                action={`/foods/${f.id}/delete`}
-                                                back={back}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                                {totals && (
-                                    <tr>
-                                        <th colspan={2}>Total</th>
-                                        <th class="num">{totals.calories}</th>
-                                        <th class="num">{totals.fat}</th>
-                                        <th class="num">{totals.protein}</th>
-                                        <th class="num">{totals.netCarbs}</th>
-                                        <th />
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
         </Layout>
     );
 }
@@ -317,14 +207,10 @@ export type HistoryPageProps = {
     dates: string[];
     weights: Weight[];
     readings: Reading[];
-    foods: Food[];
 };
 
 export function HistoryPage(p: HistoryPageProps) {
     const weightByDate = new Map(p.weights.map(w => [w.date, w]));
-    const totalsByDate = new Map<string, DayTotals>(
-        dailyTotals(p.foods).map(t => [t.date, t])
-    );
     const readingsByDate = Map.groupBy(p.readings, r => r.date);
     const gki = gkiByKetoneId(p.readings);
     const first = p.weights[0];
@@ -357,10 +243,6 @@ export function HistoryPage(p: HistoryPageProps) {
                         </b>
                         <span>Change in range</span>
                     </div>
-                    <div class="stat">
-                        <b>{totalsByDate.size}</b>
-                        <span>Days with food logged</span>
-                    </div>
                 </div>
                 <Sparkline weights={p.weights} />
             </section>
@@ -371,36 +253,27 @@ export function HistoryPage(p: HistoryPageProps) {
                             <th>Date</th>
                             <th class="num">Weight</th>
                             <th>Readings</th>
-                            <th class="num">Cal</th>
-                            <th class="num">Protein</th>
-                            <th class="num">Net carbs</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {p.dates.map(date => {
-                            const t = totalsByDate.get(date);
-                            return (
-                                <tr>
-                                    <td>
-                                        <a href={`/?date=${date}`}>{date}</a>
-                                    </td>
-                                    <td class="num">
-                                        {weightByDate.get(date)?.weight ?? ''}
-                                    </td>
-                                    <td>
-                                        {(readingsByDate.get(date) ?? [])
-                                            .map(r => {
-                                                const g = gki.get(r.id);
-                                                return `${r.time} ${formatReading(r)}${g === undefined ? '' : ` (GKI ${g})`}`;
-                                            })
-                                            .join('; ')}
-                                    </td>
-                                    <td class="num">{t?.calories ?? ''}</td>
-                                    <td class="num">{t?.protein ?? ''}</td>
-                                    <td class="num">{t?.netCarbs ?? ''}</td>
-                                </tr>
-                            );
-                        })}
+                        {p.dates.map(date => (
+                            <tr>
+                                <td>
+                                    <a href={`/?date=${date}`}>{date}</a>
+                                </td>
+                                <td class="num">
+                                    {weightByDate.get(date)?.weight ?? ''}
+                                </td>
+                                <td>
+                                    {(readingsByDate.get(date) ?? [])
+                                        .map(r => {
+                                            const g = gki.get(r.id);
+                                            return `${r.time} ${formatReading(r)}${g === undefined ? '' : ` (GKI ${g})`}`;
+                                        })
+                                        .join('; ')}
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </section>
@@ -464,14 +337,6 @@ function formatReading(r: Reading): string {
     const value =
         r.kind === 'blood_pressure' ? `${r.systolic}/${r.diastolic}` : r.value;
     return `${label} ${value} ${unit}`;
-}
-
-function mealFor(time: string): Meal {
-    const hour = Number(time.slice(0, 2));
-    if (hour >= 4 && hour < 11) return 'breakfast';
-    if (hour >= 11 && hour < 15) return 'lunch';
-    if (hour >= 17 && hour < 21) return 'dinner';
-    return 'snack';
 }
 
 function signed(n: number): string {

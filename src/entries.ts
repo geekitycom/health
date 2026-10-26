@@ -9,9 +9,6 @@ const positive = z.number().positive();
 const nonNegative = z.number().nonnegative();
 const note = z.string().trim().max(1000).optional();
 
-export const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-export type Meal = (typeof MEALS)[number];
-
 export const weightInput = z.object({
     date: localDate,
     weight: positive.max(2000),
@@ -49,20 +46,6 @@ export const readingInput = z.discriminatedUnion('kind', [
 ]);
 export type ReadingInput = z.infer<typeof readingInput>;
 
-export const foodInput = z.object({
-    date: localDate,
-    time: localTime,
-    meal: z.enum(MEALS),
-    description: z.string().trim().min(1).max(500),
-    calories: nonNegative.max(20000).optional(),
-    fat: nonNegative.max(2000).optional(),
-    protein: nonNegative.max(2000).optional(),
-    carbs: nonNegative.max(2000).optional(),
-    fiber: nonNegative.max(2000).optional(),
-    note
-});
-export type FoodInput = z.infer<typeof foodInput>;
-
 export type Weight = {
     date: string;
     weight: number;
@@ -79,19 +62,5 @@ export type Reading = {
     time: string;
     note: string | null;
 } & ReadingValue;
-
-export type Food = {
-    id: number;
-    date: string;
-    time: string;
-    meal: Meal;
-    description: string;
-    calories: number | null;
-    fat: number | null;
-    protein: number | null;
-    carbs: number | null;
-    fiber: number | null;
-    note: string | null;
-};
 
 export type DateRange = { from: string; to: string };

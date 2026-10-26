@@ -85,32 +85,16 @@ describe('web UI', () => {
         ).toEqual([]);
     });
 
-    it('totals net carbs for the day and deletes items', async () => {
-        const { app, post, store } = harness();
-        const day = { from: '2026-10-25', to: '2026-10-25' };
-        await post('/foods', {
+    it('has no food logging', async () => {
+        const { app, post } = harness();
+        const html = await (await app.request('/')).text();
+        expect(html).not.toContain('action="/foods"');
+        const res = await post('/foods', {
             date: '2026-10-25',
             time: '08:00',
-            meal: 'breakfast',
-            description: 'Eggs and avocado',
-            calories: '450',
-            carbs: '9',
-            fiber: '7'
+            description: 'Eggs'
         });
-        await post('/foods', {
-            date: '2026-10-25',
-            time: '12:30',
-            meal: 'lunch',
-            description: 'Salad',
-            carbs: '6',
-            fiber: '2'
-        });
-        const html = await (await app.request('/?date=2026-10-25')).text();
-        expect(html).toMatch(/Total<\/th>.*<th class="num">6<\/th><th>/s);
-
-        const [first] = store.foods(day);
-        await post(`/foods/${first?.id}/delete`, { back: '/?date=2026-10-25' });
-        expect(store.foods(day).map(f => f.description)).toEqual(['Salad']);
+        expect(res.status).toBe(404);
     });
 });
 

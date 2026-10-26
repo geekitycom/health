@@ -1,6 +1,6 @@
 # health
 
-A personal tracker for a keto and weight-loss journey. Log daily weight, periodic readings (glucose, ketones, blood pressure), and food with macros in a small web app. An LLM coach reads the same data through a built-in MCP server.
+A personal tracker for a keto and weight-loss journey. Log daily weight and periodic readings (glucose, ketones, blood pressure) in a small web app. An LLM coach reads the same data through a built-in MCP server.
 
 ## Run
 
@@ -30,7 +30,6 @@ Set both `APP_PASSWORD` and `MCP_TOKEN` on any server reachable from the interne
 
 - **Weight.** One entry per day. Saving again for the same day replaces it.
 - **Readings.** Each reading is one type, picked from a dropdown: glucose (mg/dL), ketones (mmol/L), or blood pressure (systolic and diastolic). A ketone reading gets a glucose-ketone index (GKI) when a glucose reading was taken within 30 minutes of it on the same day.
-- **Food.** A timestamped item with a meal, a description, and optional calories, fat, protein, carbs, and fiber in grams. Net carbs are carbs minus fiber.
 
 - **Daily goals.** Questions your coach sets up through MCP, such as "Ate chia pudding first, made tomorrow's". Each goal is yes/no, multiple choice, or free text, and is asked on the day page from its start date until the coach ends it. Each goal is answered on its own, whenever you know the answer.
 
@@ -40,16 +39,15 @@ Dates and times are stored as the local wall-clock values you enter.
 
 `/mcp` serves the MCP Streamable HTTP transport in stateless mode. Logged data is read-only; the coach can only create and end daily goals.
 
-| Tool               | Does                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| `get_summary`      | Weight trend, reading averages (glucose, ketones, GKI, BP), average daily macros, goal adherence. |
-| `get_weights`      | Daily weigh-ins.                                                                                  |
-| `get_readings`     | Every reading by type; ketone readings include their GKI.                                         |
-| `get_food_log`     | Every food item with net carbs, plus per-day totals.                                              |
-| `get_goal_answers` | Each goal's answers by date and the days it was left unanswered.                                  |
-| `list_goals`       | Current goals, or all goals with `include_ended`.                                                 |
-| `create_goal`      | Adds a yes/no, multiple-choice, or text goal starting today or on `start_date`.                   |
-| `end_goal`         | Stops asking a goal from today on. Past answers are kept.                                         |
+| Tool               | Does                                                                            |
+| ------------------ | ------------------------------------------------------------------------------- |
+| `get_summary`      | Weight trend, reading averages (glucose, ketones, GKI, BP), goal adherence.     |
+| `get_weights`      | Daily weigh-ins.                                                                |
+| `get_readings`     | Every reading by type; ketone readings include their GKI.                       |
+| `get_goal_answers` | Each goal's answers by date and the days it was left unanswered.                |
+| `list_goals`       | Current goals, or all goals with `include_ended`.                               |
+| `create_goal`      | Adds a yes/no, multiple-choice, or text goal starting today or on `start_date`. |
+| `end_goal`         | Stops asking a goal from today on. Past answers are kept.                       |
 
 The `get_*` tools take optional `from` and `to` (`YYYY-MM-DD`) or `days` (1 to 366). The default is the last 30 days ending today.
 
