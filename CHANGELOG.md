@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/geekitycom/health/compare/health-v0.1.3...health-v0.2.0) (2026-10-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* the get_food_log MCP tool and the food field of get_summary are removed.
+
+### Features
+
+* remove food tracking ([6375956](https://github.com/geekitycom/health/commit/6375956e2f77e50dc17a07059fd3e3b59bc55c20))
+
 ## [0.1.3](https://github.com/geekitycom/health/compare/health-v0.1.2...health-v0.1.3) (2026-10-25)
 
 
